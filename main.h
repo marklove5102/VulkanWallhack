@@ -1,5 +1,4 @@
-﻿//#define LOG_FILE_PATH "Log.txt"
-#define LOG_FILE_PATH "C:\\Users\\User\\Desktop\\VulkanHook\\x64\\Release\\Log.txt"
+﻿#define LOG_FILE_PATH "Log.txt"
 
 void Log(const char* format, ...) {
 	FILE* logFile;
@@ -14,10 +13,10 @@ void Log(const char* format, ...) {
 	fclose(logFile);
 }
 
-bool waitedOnce = false;
-void lognospam(int duration, const char* name)
+bool waitedOnce1 = false;
+void lognospam1(int duration, const char* name)
 {
-	if (!waitedOnce)
+	if (!waitedOnce1)
 	{
 		int n;
 
@@ -26,8 +25,77 @@ void lognospam(int duration, const char* name)
 			if (GetTickCount() % 100)
 				Log(name);
 		}
-		waitedOnce = true;
+		waitedOnce1 = true;
 	}
+}
+
+bool waitedOnce2 = false;
+void lognospam2(int duration, const char* name)
+{
+	if (!waitedOnce2)
+	{
+		int n;
+
+		for (n = 0; n < duration; n++)
+		{
+			if (GetTickCount() % 100)
+				Log(name);
+		}
+		waitedOnce2 = true;
+	}
+}
+
+bool waitedOnce3 = false;
+void lognospam3(int duration, const char* name)
+{
+	if (!waitedOnce3)
+	{
+		int n;
+
+		for (n = 0; n < duration; n++)
+		{
+			if (GetTickCount() % 100)
+				Log(name);
+		}
+		waitedOnce3 = true;
+	}
+}
+
+bool waitedOnce4 = false;
+void lognospam4(int duration, const char* name)
+{
+	if (!waitedOnce4)
+	{
+		int n;
+
+		for (n = 0; n < duration; n++)
+		{
+			if (GetTickCount() % 100)
+				Log(name);
+		}
+		waitedOnce4 = true;
+	}
+}
+
+
+// Thread-local cache
+thread_local struct {
+	UINT StartSlot = 0;
+	UINT Strides[16] = {};
+	UINT numViews = 0;
+	UINT vertexBufferSizes[16] = {};
+
+	UINT cachedStrideSum = 0;
+	uint32_t StrideHash = 0;
+} t_;
+
+uint32_t fastStrideHash(const uint32_t* data, size_t count) {
+	uint32_t hash = 2166136261u;
+	for (size_t i = 0; i < count; ++i) {
+		hash ^= data[i];
+		hash *= 16777619u;
+	}
+	return hash % 100; // Two-digit number
 }
 
 #ifdef _UNICODE
@@ -35,36 +103,7 @@ void lognospam(int duration, const char* name)
 #else
 # define VTEXT(text) text
 #endif
-
-// Vulkan method table
-static uintptr_t* MethodsTable = nullptr;  // Use uintptr_t for safe pointer storage
-
-bool CreateHook(uint16_t Index, void** Original, void* Function) {
-	assert(Index >= 0 && Original != nullptr && Function != nullptr);
-
-	void* target = reinterpret_cast<void*>(MethodsTable[Index]);  // Safe pointer cast
-
-	if (target == nullptr) {
-		return false;  // Prevent hooking a null pointer
-	}
-
-	if (MH_CreateHook(target, Function, Original) != MH_OK || MH_EnableHook(target) != MH_OK) {
-		return false;
-	}
-	return true;
-}
-
-void DisableHook(uint16_t Index) {
-	assert(Index >= 0);
-	MH_DisableHook((void*)MethodsTable[Index]);
-}
-
-void DisableAll() {
-	MH_DisableHook(MH_ALL_HOOKS);
-	free(MethodsTable);
-	MethodsTable = NULL;
-}
-
+/*
 void createCommandPool(VkDevice device, uint32_t queueFamilyIndex) {
 	VkCommandPoolCreateInfo poolInfo = {};
 	poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -75,7 +114,7 @@ void createCommandPool(VkDevice device, uint32_t queueFamilyIndex) {
 		Log("failed to create command pool!");
 	}
 }
-
+*/
 //cratepipeline
 
 
