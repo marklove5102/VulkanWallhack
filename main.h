@@ -1,93 +1,55 @@
-﻿#define LOG_FILE_PATH "Log.txt"
+﻿#include <fstream>
+inline void Log(const char* fmt, ...) {
+	char text[4096] = { 0 };
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(text, sizeof(text), fmt, ap);
+	va_end(ap);
 
-void Log(const char* format, ...) {
-	FILE* logFile;
-	if (fopen_s(&logFile, LOG_FILE_PATH, "a") != 0) return;
-
-	va_list args;
-	va_start(args, format);
-	vfprintf(logFile, format, args);
-	va_end(args);
-
-	fprintf(logFile, "\n");
-	fclose(logFile);
-}
-
-bool waitedOnce1 = false;
-void lognospam1(int duration, const char* name)
-{
-	if (!waitedOnce1)
-	{
-		int n;
-
-		for (n = 0; n < duration; n++)
-		{
-			if (GetTickCount() % 100)
-				Log(name);
-		}
-		waitedOnce1 = true;
+	std::ofstream logfile("log.txt", std::ios::app);
+	if (logfile.is_open()) {
+		logfile << text << std::endl;
 	}
 }
 
-bool waitedOnce2 = false;
-void lognospam2(int duration, const char* name)
-{
-	if (!waitedOnce2)
-	{
-		int n;
+//viewport
+thread_local struct ViewportState {
+	VkViewport currentViewport = { 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+	uint32_t firstViewport = 0;
+	bool hasViewport = false;
+} vkt_;
 
-		for (n = 0; n < duration; n++)
-		{
-			if (GetTickCount() % 100)
-				Log(name);
-		}
-		waitedOnce2 = true;
-	}
-}
-
-bool waitedOnce3 = false;
-void lognospam3(int duration, const char* name)
-{
-	if (!waitedOnce3)
-	{
-		int n;
-
-		for (n = 0; n < duration; n++)
-		{
-			if (GetTickCount() % 100)
-				Log(name);
-		}
-		waitedOnce3 = true;
-	}
-}
-
-bool waitedOnce4 = false;
-void lognospam4(int duration, const char* name)
-{
-	if (!waitedOnce4)
-	{
-		int n;
-
-		for (n = 0; n < duration; n++)
-		{
-			if (GetTickCount() % 100)
-				Log(name);
-		}
-		waitedOnce4 = true;
-	}
-}
+bool reversedDepth = false;
 
 
-// Thread-local cache
-thread_local struct {
-	UINT StartSlot = 0;
-	UINT Strides[16] = {};
-	UINT numViews = 0;
-	UINT vertexBufferSizes[16] = {};
+#include <unordered_map>
+#include <shared_mutex>
 
-	UINT cachedStrideSum = 0;
-	uint32_t StrideHash = 0;
-} t_;
+//pipeline
+// Command Buffer State
+struct CmdState {
+	VkViewport currentViewport;
+	uint32_t firstViewport;
+	bool hasViewport = false;
+};
+std::unordered_map<VkCommandBuffer, CmdState> cmdStates;
+std::shared_mutex statesMtx;
+
+// Pipeline State
+struct PipelineSettings {
+	VkBool32 originalDepthTestEnable;
+	VkBool32 originalDepthWriteEnable;
+	VkCompareOp originalDepthCompareOp;
+	uint32_t stride;
+};
+std::unordered_map<VkPipeline, PipelineSettings> pipelineData;
+std::shared_mutex pipeMapMtx;
+
+
+//std::shared_mutex pipeMapMtx2;
+//std::unordered_map<VkPipeline, uint32_t> pipelineToStride;
+std::unordered_map<VkCommandBuffer, uint32_t> cmdBufferToStride;
+
 
 uint32_t fastStrideHash(const uint32_t* data, size_t count) {
 	uint32_t hash = 2166136261u;
@@ -103,6 +65,7 @@ uint32_t fastStrideHash(const uint32_t* data, size_t count) {
 #else
 # define VTEXT(text) text
 #endif
+
 /*
 void createCommandPool(VkDevice device, uint32_t queueFamilyIndex) {
 	VkCommandPoolCreateInfo poolInfo = {};
@@ -116,8 +79,6 @@ void createCommandPool(VkDevice device, uint32_t queueFamilyIndex) {
 }
 */
 //cratepipeline
-
-
 
 /*
 Disabling ambient occlusion (AO) in Vulkan depends on how AO is implemented in the engine or application you're hooking. Here are some potential ways to disable AO in a Vulkan hook:
