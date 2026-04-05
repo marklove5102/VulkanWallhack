@@ -17,10 +17,6 @@
 #pragma comment(lib, "vulkan/vulkan-1.lib")
 
 //=======================================================================================//
-// Globals
-bool initonce = false;
-int countnum = -1;
-//=======================================================================================//
 
 #include "main.h"
 
@@ -87,9 +83,6 @@ PFN_vkCmdSetDepthCompareOp gp_vkCmdSetDepthCompareOp = nullptr;
 PFN_vkCmdSetDepthWriteEnable gp_vkCmdSetDepthWriteEnable = nullptr;
 PFN_vkCmdSetDepthTestEnable gp_vkCmdSetDepthTestEnable = nullptr;
 PFN_vkCmdSetDepthBias gp_vkCmdSetDepthBias = nullptr;
-
-//=======================================================================================//
-
 
 //=======================================================================================//
 // Detour Functions
@@ -238,6 +231,37 @@ void VKAPI_CALL DetourVkCmdDrawIndexedIndirect(
     VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride)
 {
     //Log("2 VkCmdDrawIndexedIndirect hooked");
+    /*
+    uint32_t currentStride = 0;
+    {
+        // Get the stride we saved during BindPipeline
+        std::shared_lock<std::shared_mutex> lock(pipeMapMtx); // Use same mutex
+        auto it = cmdBufferToStride.find(cmd);
+        if (it != cmdBufferToStride.end()) currentStride = it->second;
+    }
+
+    uint32_t shortCount = (drawCount >> 12) % 100;
+    uint32_t shortbuffer = ((uintptr_t)buffer >> 12) % 100;
+    uint32_t shortOffset = (offset >> 8) % 100; // or >> 12
+
+    // Identify monsters via Stride or IndexCount
+    // If your logger found 'countnum' matches currentStride, hack it!
+    bool isMonster = (currentStride == countnum || shortCount == countnum|| shortbuffer == countnum|| shortOffset==countnum);
+
+    if (isMonster) {
+        gp_vkCmdSetDepthTestEnable(cmd, VK_FALSE);
+        gp_vkCmdSetDepthCompareOp(cmd, VK_COMPARE_OP_ALWAYS);
+
+        pOriginalCmdDrawIndexedIndirect(cmd, buffer, offset, drawCount, stride);
+
+        // Restore
+        gp_vkCmdSetDepthTestEnable(cmd, VK_TRUE);
+        gp_vkCmdSetDepthCompareOp(cmd, VK_COMPARE_OP_LESS_OR_EQUAL);
+    }
+    else {
+        pOriginalCmdDrawIndexedIndirect(cmd, buffer, offset, drawCount, stride);
+    }
+    */
     return pOriginalCmdDrawIndexedIndirect(cmd, buffer, offset, drawCount, stride);
 }
 
@@ -249,7 +273,7 @@ void VKAPI_CALL DetourVkCmdDrawIndexedIndirectCount(
     //Log("3 VkCmdDrawIndexedIndirectCount hooked");
     auto pOrig = pOriginalCmdDrawIndexedIndirectCount;
     if (!pOrig) return;
-
+    
     CmdState localState;
     bool found = false;
     {
@@ -309,10 +333,11 @@ void VKAPI_CALL DetourVkCmdDrawIndexedIndirectCount(
         // Draw normally if it's not the target object
         pOrig(cmd, buffer, offset, countBuffer, countBufferOffset, maxDrawCount, stride);
     }
-
+    
     // Logic for finding the 'countnum' ID
     if (GetAsyncKeyState('O') & 1) countnum--;
     if (GetAsyncKeyState('P') & 1) countnum++;
+    pOrig(cmd, buffer, offset, countBuffer, countBufferOffset, maxDrawCount, stride);
 }
 
 void VKAPI_CALL DetourBindVertexBuffers2(

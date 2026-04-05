@@ -1,4 +1,8 @@
-﻿#include <fstream>
+﻿// Globals
+bool initonce = false;
+int countnum = -1;
+
+#include <fstream>
 inline void Log(const char* fmt, ...) {
 	char text[4096] = { 0 };
 	va_list ap;
